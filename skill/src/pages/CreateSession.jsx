@@ -482,16 +482,21 @@ const CreateSession = () => {
       const { sessionsApi } = await import('../services/api');
       try {
         const response = await sessionsApi.create(payload);
-        console.log('Session creation response:', response);
+        console.log('Full response object:', JSON.stringify(response, null, 2));
         
-        // The response from axios is { data, status, statusText, headers, config }
-        // The actual session data is in response.data
-        if (response && response.data && (response.data._id || response.data.id)) {
+        // Log the structure of the response for debugging
+        console.log('Response keys:', Object.keys(response));
+        console.log('Response data type:', typeof response.data);
+        console.log('Response data:', response.data);
+        
+        // Check for both possible response structures
+        const sessionData = response.data || response;
+        if (sessionData && (sessionData._id || sessionData.id || (sessionData.data && (sessionData.data._id || sessionData.data.id)))) {
           showSnackbar('Session created successfully!', 'success');
           navigate('/teach');
         } else {
-          console.error('Unexpected response format:', response);
-          throw new Error('Failed to create session: Invalid response format');
+          console.error('Unexpected response format. Full response:', response);
+          throw new Error('Failed to create session: Invalid response format. Expected session data with _id or id');
         }
       } catch (error) {
         console.error('API Error details:', {

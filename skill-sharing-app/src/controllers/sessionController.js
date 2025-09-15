@@ -54,7 +54,15 @@ exports.createSession = async (req, res) => {
       })) : []
     });
 
-    res.status(201).json(session);
+    // Convert to plain JS object and ensure _id is included
+    const sessionObj = session.toObject();
+    
+    // Return a consistent response format
+    res.status(201).json({
+      success: true,
+      data: sessionObj,
+      id: sessionObj._id || sessionObj.id
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error creating session', error: error.message });
   }
