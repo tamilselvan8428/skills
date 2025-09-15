@@ -19,7 +19,7 @@ import {
   School as SchoolIcon,
   People as PeopleIcon
 } from '@mui/icons-material';
-import { skillsApi, usersApi } from '../services/api';
+import { skillsApi, usersApi, sessionsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
@@ -27,25 +27,31 @@ const Teach = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [skills, setSkills] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [newSkill, setNewSkill] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
   useEffect(() => {
-    const fetchSkills = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await skillsApi.list();
-        setSkills(response.data);
+        // Fetch both skills and sessions in parallel
+        const [skillsRes, sessionsRes] = await Promise.all([
+          skillsApi.list(),
+          sessionsApi.mine()
+        ]);
+        setSkills(skillsRes.data);
+        setSessions(sessionsRes.data || []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load skills');
+        setError(err.response?.data?.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchSkills();
+    fetchData();
   }, []);
   
   const handleAddSkill = async (e) => {
@@ -88,32 +94,96 @@ const Teach = () => {
       )}
 
       {/* Add New Skill Form */}
-      <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Add a New Skill to Teach
-        </Typography>
-        <Box component="form" onSubmit={handleAddSkill} sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
-          <TextField
-            fullWidth
-            label="Skill Name"
-            value={newSkill}
-            onChange={(e) => setNewSkill(e.target.value)}
-            placeholder="e.g., JavaScript, Photography, Cooking"
-            disabled={submitting}
-          />
-          <Button
-            type="submit"
-            variant="contained"
-            startIcon={<AddIcon />}
-            disabled={submitting || !newSkill.trim()}
-          >
-            Add Skill
-          </Button>
-        </Box>
-      </Paper>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, height: '100%' }}>
+            <Typography variant="h6" gutterBottom>
+              Add a New Skill to Teach
+            </Typography>
+            <Box component="form" onSubmit={handleAddSkill} sx={{ display: 'flex', gap: 2, alignItems: 'flex-end' }}>
+              <TextField
+                fullWidth
+                label="Skill Name"
+                value={newSkill}
+                onChange={(e) => setNewSkill(e.target.value)}
+                placeholder="e.g., JavaScript, Photography, Cooking"
+                disabled={submitting}
+                size="small"
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<AddIcon />}
+                disabled={submitting || !newSkill.trim()}
+                size="small"
+              >
+                Add
+              </Button>
+            </Box>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} md={6}>
+          <Paper sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography variant="h6" gutterBottom>
+                  Your Teaching Sessions
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {sessions.length} upcoming session{sessions.length !== 1 ? 's' : ''}
+                </Typography>
+              </Box>
+              <Button 
+                variant="outlined" 
+                startIcon={<AddIcon />}
+                onClick={() => navigate('/create-session')}
+                size="small"
+              >
+                New Session
+              </Button>
+            </Box>
+            
+            {/* Sessions List */}
+            {sessions.length > 0 ? (
+              <Box sx={{ mt: 2 }}>
+                {sessions.map((session) => (
+                  <Paper 
+                    key={session._id} 
+                    sx={{ 
+                      p: 2, 
+                      mb: 1, 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      '&:hover': { bgcolor: 'action.hover', cursor: 'pointer' }
+                    }}
+                    onClick={() => navigate(`/sessions/${session._id}`)}
+                  >
+                    <Box>
+                      <Typography variant="subtitle1">{session.title}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(session.scheduledTime).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Chip 
+                      label={session.status || 'upcoming'} 
+                      color={session.status === 'completed' ? 'success' : 'primary'} 
+                      size="small"
+                    />
+                  </Paper>
+                ))}
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+                No upcoming sessions. Create your first session!
+              </Typography>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
 
       {/* Skills Grid */}
-      <Typography variant="h5" gutterBottom sx={{ mb: 3 }}>
+      <Typography variant="h5" gutterBottom sx={{ mb: 3, mt: 4 }}>
         Available Skills
       </Typography>
       
